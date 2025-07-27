@@ -5,6 +5,7 @@ import (
 	"270725/internal/storage"
 	"context"
 	"github.com/google/uuid"
+	"slices"
 	"sync"
 )
 
@@ -71,4 +72,43 @@ func (m *Memory) AddLinksToTask(_ context.Context, taskID string, links []*model
 	m.tasks[taskID] = task
 
 	return task, nil
+}
+
+func (m *Memory) MarkTaskLinksInProcessStatus(_ context.Context, taskID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	task, exists := m.tasks[taskID]
+	if !exists {
+		return storage.ErrTaskNotFound
+	}
+
+	for idx := range task.FilesLink {
+		task.FilesLink[idx].Status = models.InProcessTaskLinkStatus
+	}
+
+	m.tasks[taskID] = task
+
+	return nil
+}
+
+func (m *Memory) MarkTaskLinksCompleted(_ context.Context, taskID string, completedLinks []string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	task, exists := m.tasks[taskID]
+	if !exists {
+		return storage.ErrTaskNotFound
+	}
+
+	for idx := range task.FilesLink {
+		if slices.Contains(completedLinks, task.FilesLink[idx].Link) {
+			task.FilesLink[idx].Status = models.CompletedTaskLinkStatus
+			continue
+		}
+
+		task.FilesLink[idx].Status = models.ErrorTaskLinkStatus
+	}
+
+	return nil
 }
