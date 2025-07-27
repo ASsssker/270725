@@ -1,0 +1,190 @@
+openapi: 3.0.1
+info:
+  title: zipper
+  version: 1.0.0
+servers:
+  - url: /api/v1/
+paths:
+  /swagger:
+    get:
+      tags:
+        - swagger
+      summary: returns json api description
+      description: getAPI
+      operationId: getAPI
+      responses:
+        "200":
+          description: scheme in json
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/API"
+        "404":
+          description: not found error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /task:
+    post:
+      tags:
+        - task
+      summary: create new task
+      description: AddTask
+      operationId: AddTask
+      responses:
+        "201":
+          description: Added task information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      tags:
+        - task
+      summary: get all tasks
+      description: getAllTasks
+      operationId: getAllTasks
+      responses:
+        "200":
+          description: tasks list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+  /task/{id}:
+    get:
+      tags:
+        - "task"
+      summary: get task
+      description: getTask
+      operationId: getTask
+      parameters:
+        - name: id
+          in: path
+          description: task id
+          schema:
+            type: string
+            x-go-type-skip-optional-pointer: true
+            x-oapi-codegen-extra-tags:
+              validate: required
+      responses:
+        "200":
+          description: task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /task/{id}/link:
+    post:
+      tags:
+        - "task"
+        - "links"
+      summary: add link to task
+      description: addLink
+      operationId: addLink
+      parameters:
+        - name: id
+          in: path
+          description: task id
+          schema:
+            type: string
+            x-go-type-skip-optional-pointer: true
+            x-oapi-codegen-extra-tags:
+              validate: required
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  link:
+                    type: string
+      responses:
+        "201":
+          description: link added
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileLinkInfo"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          x-omitempty: false
+          x-go-type-skip-optional-pointer: true
+        filesLink:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: "#/components/schemas/FileLinkInfo"
+    FileLinkInfo:
+      type: object
+      properties:
+        link:
+          type: string
+        status:
+          type: string
+          enum:
+            - "new"
+            - "in_process"
+            - "completed"
+            - "error"
+    API:
+      type: object
+      properties:
+        api:
+          type: string
+          x-go-type-skip-optional-pointer: true
+    Error:
+      type: object
+      properties:
+        error_code:
+          type: integer
+        description:
+          type: string
