@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"log/slog"
 	"net/http"
 )
@@ -18,7 +19,8 @@ type TaskService interface {
 }
 
 func RegisterHandler(router *echo.Echo, handler *Handler) {
-	bp.RegisterHandlers(router, handler)
+	router.Use(middleware.Recover(), handler.handleError())
+	bp.RegisterHandlersWithBaseURL(router, handler, "/api/v1")
 }
 
 type Handler struct {
@@ -66,12 +68,12 @@ func (h *Handler) GetAllTasks(c echo.Context) error {
 func (h *Handler) AddLink(c echo.Context, id string) error {
 	ctx := c.Request().Context()
 
-	links := &bp.AddLinkJSONRequestBody{}
-	if err := c.Bind(links); err != nil {
+	links := bp.AddLinkJSONRequestBody{}
+	if err := c.Bind(&links); err != nil {
 		return fmt.Errorf("failed to bind add link: %w", err)
 	}
 
-	linksModels := convertRequestLink(*links)
+	linksModels := convertRequestLink(links)
 	task, err := h.taskService.AddLinksToTask(ctx, id, linksModels)
 	if err != nil {
 		return fmt.Errorf("failed to add link: %w", err)
