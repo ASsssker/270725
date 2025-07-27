@@ -22,7 +22,7 @@ func NewZipper(archivePath string) (*Zipper, error) {
 }
 
 func (z *Zipper) ToArchive(archiveName string, files map[string][]byte) error {
-	archiveName = filepath.Join(archiveName, filepath.Base(z.archivePath))
+	archiveName = filepath.Join(filepath.Base(z.archivePath), archiveName)
 
 	archive, err := os.Create(archiveName)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/alitto/pond/v2"
 	"github.com/go-playground/validator/v10"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 )
@@ -168,7 +169,7 @@ func (t *TaskService) AddLinksToTask(ctx context.Context, taskID string, links [
 
 	log.Debug("operation completed")
 
-	return nil, nil
+	return task, nil
 }
 
 func (t *TaskService) processTask(task *models.Task) {
@@ -187,7 +188,7 @@ func (t *TaskService) processTask(task *models.Task) {
 		log := t.log.With(slog.String("task_id", task.ID))
 		linkContents := t.requester.GetLinksContents(log, getLinksFromTask(task))
 
-		if err := t.archiver.ToArchive(task.ID, linkContents); err != nil {
+		if err := t.archiver.ToArchive(task.ID, convertLinksFilename(linkContents)); err != nil {
 			t.log.Error("failed to archive task", slog.String("error", err.Error()))
 			if err := t.taskRepo.MarkTaskLinksCompleted(context.TODO(), task.ID, []string{}); err != nil {
 				t.log.Error("failed to update task status to error", slog.String("error", err.Error()))
@@ -205,13 +206,28 @@ func (t *TaskService) processTask(task *models.Task) {
 
 func (t *TaskService) checkLinksExtension(links []*models.FileLink) error {
 	for _, link := range links {
+		allowed := false
 		for _, extension := range t.allowedExtensions {
-			if !strings.HasSuffix(link.Link, extension) {
-				return fmt.Errorf(`link "%s" extension not allowed, allowed extensions %s`, link.Link, strings.Join(t.allowedExtensions, ","))
+			if strings.HasSuffix(link.Link, extension) {
+				allowed = true
 			}
+		}
+		if !allowed {
+			return fmt.Errorf(`link "%s" extension not allowed, allowed extensions %s`, link.Link, strings.Join(t.allowedExtensions, ","))
+
 		}
 	}
 	return nil
+}
+
+func convertLinksFilename(linksInfo map[string][]byte) map[string][]byte {
+	result := make(map[string][]byte)
+	for link, data := range linksInfo {
+		_, name := filepath.Split(link)
+		result[name] = data
+	}
+
+	return result
 }
 
 func getLinksFromTask(task *models.Task) []string {
