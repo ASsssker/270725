@@ -18,6 +18,7 @@ const (
 type Config struct {
 	LogLevel string `env:"LOG_LEVEL" envDefault:"info" validate:"oneof=debug info warn error"`
 	ServerConfig
+	TaskConfig
 }
 
 type ServerConfig struct {
@@ -26,6 +27,11 @@ type ServerConfig struct {
 	ReadTimeout  time.Duration `env:"READ_TIMEOUT" envDefault:"5s"`
 	WriteTimeout time.Duration `env:"WRITE_TIMEOUT" envDefault:"5s"`
 	IdleTimeout  time.Duration `env:"IDLE_TIMEOUT" envDefault:"10"`
+}
+
+type TaskConfig struct {
+	TasksBufferSize uint `env:"TASKS_BUFFER_SIZE" envDefault:"3"`
+	LinksInTask     uint `env:"LINKS_IN_TASK" envDefault:"3"`
 }
 
 func MustLoad() Config {
