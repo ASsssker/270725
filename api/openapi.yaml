@@ -189,5 +189,7 @@ components:
       properties:
         error_code:
           type: integer
+          x-go-type-skip-optional-pointer: true
         description:
           type: string
+          x-go-type-skip-optional-pointer: true
