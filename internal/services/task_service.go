@@ -192,6 +192,10 @@ func (t *TaskService) GetTaskResult(ctx context.Context, taskID string) (string,
 }
 
 func (t *TaskService) processTask(task *models.Task) {
+	const op = "taskService.processTask"
+	log := t.log.With(slog.String("op", op))
+	log.Debug("start operation", slog.String("id", task.ID))
+
 	t.pool.Go(func() {
 		defer t.taskInProcess.Add(-1)
 		if err := t.taskRepo.MarkTaskLinksInProcessStatus(context.TODO(), task.ID); err != nil {
@@ -220,6 +224,8 @@ func (t *TaskService) processTask(task *models.Task) {
 			t.log.Error("failed to update task status to completed", slog.String("error", err.Error()))
 			return
 		}
+
+		log.Debug("operation completed")
 	})
 }
 
