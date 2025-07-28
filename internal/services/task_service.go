@@ -10,6 +10,8 @@ import (
 	"github.com/alitto/pond/v2"
 	"github.com/go-playground/validator/v10"
 	"log/slog"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -43,6 +45,7 @@ type TaskService struct {
 	validator         *validator.Validate
 	pool              pond.Pool
 	allowedExtensions []string
+	archivesDir       string
 }
 
 func NewTaskService(
@@ -63,6 +66,7 @@ func NewTaskService(
 		validator:         validator.New(),
 		pool:              pond.NewPool(int(cfg.TasksBufferSize), pond.WithNonBlocking(true)),
 		allowedExtensions: cfg.AllowedExtensions,
+		archivesDir:       cfg.ArchivesDir,
 	}
 }
 
@@ -172,6 +176,21 @@ func (t *TaskService) AddLinksToTask(ctx context.Context, taskID string, links [
 	return task, nil
 }
 
+func (t *TaskService) GetTaskResult(ctx context.Context, taskID string) (string, string, error) {
+	const op = "taskService.GetTaskResult"
+	log := t.log.With(slog.String("op", op))
+	log.Debug("start operation")
+
+	filePath := filepath.Join(t.archivesDir, taskID)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return "", "", ErrTaskNotFound
+	}
+
+	log.Debug("operation completed")
+
+	return filePath, taskID, nil
+}
+
 func (t *TaskService) processTask(task *models.Task) {
 	t.pool.Go(func() {
 		defer t.taskInProcess.Add(-1)
@@ -222,9 +241,11 @@ func (t *TaskService) checkLinksExtension(links []*models.FileLink) error {
 
 func convertLinksFilename(linksInfo map[string][]byte) map[string][]byte {
 	result := make(map[string][]byte)
+	prefix := byte('1')
 	for link, data := range linksInfo {
-		_, name := filepath.Split(link)
+		name := string(prefix) + "_ " + url.PathEscape(link)
 		result[name] = data
+		prefix++
 	}
 
 	return result

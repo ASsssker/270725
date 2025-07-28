@@ -32,8 +32,9 @@ type ServerConfig struct {
 }
 
 type TaskConfig struct {
-	TasksBufferSize uint `env:"TASKS_BUFFER_SIZE" env-default:"3"`
-	LinksInTask     uint `env:"LINKS_IN_TASK" env-default:"3"`
+	TasksBufferSize uint   `env:"TASKS_BUFFER_SIZE" env-default:"3"`
+	LinksInTask     uint   `env:"LINKS_IN_TASK" env-default:"3"`
+	ArchivesDir     string `env:"ARCHIVES_DIR" env-default:"./archives"`
 }
 
 type Filter struct {

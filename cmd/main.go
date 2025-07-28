@@ -54,7 +54,7 @@ func newServer(cfg config.Config, logger *slog.Logger) *http.Server {
 	logger.Info("starting repository")
 
 	requester := services.NewRequesterService(int(cfg.TasksBufferSize * cfg.LinksInTask))
-	archiver, err := services.NewZipper("./archives")
+	archiver, err := services.NewZipper(cfg.ArchivesDir)
 	if err != nil {
 		panic(fmt.Errorf("failed to create archiver: %w", err))
 	}

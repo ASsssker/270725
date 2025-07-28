@@ -150,6 +150,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /task/{id}/result:
+    get:
+      tags:
+        - "task"
+        - "result"
+      summary: task result archive
+      description: getResult
+      operationId: getResult
+      parameters:
+        - name: id
+          in: path
+          description: task id
+          schema:
+            type: string
+            x-go-type-skip-optional-pointer: true
+            x-oapi-codegen-extra-tags:
+              validate: required
+      responses:
+        "200":
+          description: the archive fle
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: task result not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Task:

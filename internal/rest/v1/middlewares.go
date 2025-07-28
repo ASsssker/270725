@@ -26,7 +26,7 @@ func (h *Handler) handleError() echo.MiddlewareFunc {
 				case errors.Is(err, services.ErrTaskNotFound):
 					return c.JSON(http.StatusNotFound, bp.Error{
 						ErrorCode:   http.StatusNotFound,
-						Description: "task not found",
+						Description: "not found",
 					})
 
 				case errors.Is(err, services.ErrServiceBusy):

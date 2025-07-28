@@ -16,6 +16,7 @@ type TaskService interface {
 	GetAllTasks(ctx context.Context) ([]*models.Task, error)
 	GetTask(ctx context.Context, id string) (*models.Task, error)
 	AddLinksToTask(ctx context.Context, taskID string, links []*models.FileLink) (*models.Task, error)
+	GetTaskResult(ctx context.Context, taskID string) (string, string, error)
 }
 
 func RegisterHandler(router *echo.Echo, handler *Handler) {
@@ -101,6 +102,17 @@ func (h *Handler) GetTask(c echo.Context, id string) error {
 	}
 
 	return c.JSON(http.StatusOK, responseTask)
+}
+
+func (h *Handler) GetResult(c echo.Context, id string) error {
+	ctx := c.Request().Context()
+
+	filePath, name, err := h.taskService.GetTaskResult(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get result: %w", err)
+	}
+
+	return c.Attachment(filePath, name)
 }
 
 func convertLinks(links []*models.FileLink) []bp.FileLinkInfo {

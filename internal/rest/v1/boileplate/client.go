@@ -105,6 +105,9 @@ type ClientInterface interface {
 	AddLinkWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	AddLink(ctx context.Context, id string, body AddLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetResult request
+	GetResult(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) GetAPI(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -169,6 +172,18 @@ func (c *Client) AddLinkWithBody(ctx context.Context, id string, contentType str
 
 func (c *Client) AddLink(ctx context.Context, id string, body AddLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddLinkRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetResult(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetResultRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -341,6 +356,40 @@ func NewAddLinkRequestWithBody(server string, id string, contentType string, bod
 	return req, nil
 }
 
+// NewGetResultRequest generates requests for GetResult
+func NewGetResultRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/task/%s/result", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -400,6 +449,9 @@ type ClientWithResponsesInterface interface {
 	AddLinkWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddLinkResponse, error)
 
 	AddLinkWithResponse(ctx context.Context, id string, body AddLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*AddLinkResponse, error)
+
+	// GetResultWithResponse request
+	GetResultWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetResultResponse, error)
 }
 
 type GetAPIResponse struct {
@@ -519,6 +571,28 @@ func (r AddLinkResponse) StatusCode() int {
 	return 0
 }
 
+type GetResultResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r GetResultResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetResultResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // GetAPIWithResponse request returning *GetAPIResponse
 func (c *ClientWithResponses) GetAPIWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAPIResponse, error) {
 	rsp, err := c.GetAPI(ctx, reqEditors...)
@@ -570,6 +644,15 @@ func (c *ClientWithResponses) AddLinkWithResponse(ctx context.Context, id string
 		return nil, err
 	}
 	return ParseAddLinkResponse(rsp)
+}
+
+// GetResultWithResponse request returning *GetResultResponse
+func (c *ClientWithResponses) GetResultWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetResultResponse, error) {
+	rsp, err := c.GetResult(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetResultResponse(rsp)
 }
 
 // ParseGetAPIResponse parses an HTTP response from a GetAPIWithResponse call
@@ -745,6 +828,32 @@ func ParseAddLinkResponse(rsp *http.Response) (*AddLinkResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetResultResponse parses an HTTP response from a GetResultWithResponse call
+func ParseGetResultResponse(rsp *http.Response) (*GetResultResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetResultResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

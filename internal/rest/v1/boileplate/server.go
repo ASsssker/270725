@@ -28,6 +28,9 @@ type ServerInterface interface {
 	// add link to task
 	// (POST /task/{id}/link)
 	AddLink(ctx echo.Context, id string) error
+	// task result archive
+	// (GET /task/{id}/result)
+	GetResult(ctx echo.Context, id string) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -94,6 +97,22 @@ func (w *ServerInterfaceWrapper) AddLink(ctx echo.Context) error {
 	return err
 }
 
+// GetResult converts echo context to params.
+func (w *ServerInterfaceWrapper) GetResult(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: false})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetResult(ctx, id)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -127,5 +146,6 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	router.POST(baseURL+"/task", wrapper.AddTask)
 	router.GET(baseURL+"/task/:id", wrapper.GetTask)
 	router.POST(baseURL+"/task/:id/link", wrapper.AddLink)
+	router.GET(baseURL+"/task/:id/result", wrapper.GetResult)
 
 }
